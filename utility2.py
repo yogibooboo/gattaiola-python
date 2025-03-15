@@ -1,31 +1,35 @@
 import numpy as np
 
-def decodifica_bit_e_byte(bits, periodo_bit_campioni):
+def trova_indice_sincronizzazione(bits):
+    """Trova l'indice della prima sequenza di 10 bit a 0."""
+    for i in range(len(bits) - 9):
+        if all(bit == 0 for bit in bits[i:i + 10]):
+            return i  # Restituisce l'indice del primo bit della sequenza
+    return -1  # Nessuna sequenza trovata
+
+def decodifica_bit_e_byte(bits, periodo_bit_campioni, indice_partenza=0):
     """Decodifica i bit e i byte, verifica il CRC e decodifica i dati specifici."""
 
     # Identificazione della sequenza di 10 bit a 0
     sequenza_trovata = False
     indice_primo_bit_successivo = -1
-    for i in range(len(bits) - 9):
+    for i in range(indice_partenza, len(bits) - 9):
         if all(bit == 0 for bit in bits[i:i + 10]):
             sequenza_trovata = True
             indice_primo_bit_successivo = i + 10
             break
 
     if not sequenza_trovata:
-        print("Sequenza di 10 bit a 0 non trovata.")
-        return None, None  # Esce dalla funzione se la sequenza non viene trovata
+        return None, None, None, None, None, None  # Nessuna sequenza trovata
 
     # Creazione dell'array di 10 byte
     bytes_decodificati = []
     for i in range(10):
         indice_byte = indice_primo_bit_successivo + i * 9
         if indice_byte + 9 > len(bits):
-            print("Errore: Indice fuori dai limiti.")
-            return None, None  # Esce dalla funzione se l'indice è fuori dai limiti
+            return None, None, None, None, None, None  # Indice fuori dai limiti
         if bits[indice_byte] != 1:
-            print("Errore di sincronizzazione: Bit di sincronizzazione non trovato.")
-            return None, None  # Esce dalla funzione se il bit di sincronizzazione non è 1
+            return None, None, None, None, None, indice_byte  # Errore di sincronizzazione
         byte = 0
         for j in range(8):
             byte |= bits[indice_byte + 1 + j] << j
@@ -37,17 +41,11 @@ def decodifica_bit_e_byte(bits, periodo_bit_campioni):
         crc_ricevuto = (bytes_decodificati[-1] << 8) | bytes_decodificati[-2]
         crc_calcolato = calc_crc16_ccitt(dati)
         if crc_ricevuto == crc_calcolato:
-            print("CRC-16-CCITT OK (bit invertiti)")
+            return bytes_decodificati, indice_primo_bit_successivo, True, None, None, None  # CRC OK
         else:
-            print("CRC-16-CCITT Errato (bit invertiti)")
-            print(f"CRC-16-CCITT Ricevuto: {crc_ricevuto:04X}")
-            print(f"CRC-16-CCITT Calcolato: {crc_calcolato:04X}")
+            return bytes_decodificati, indice_primo_bit_successivo, False, crc_ricevuto, crc_calcolato, None  # CRC Errato
 
-    # Decodifica dei dati specifici (codice paese e codice dispositivo)
-    country_code_bin = (bytes_decodificati[5] << 2) | (bytes_decodificati[4] >> 6) if len(bytes_decodificati) >= 8 else None
-    device_code_bin = (bytes_decodificati[4] & 0x3F) << 32 | (bytes_decodificati[3] << 24) | (bytes_decodificati[2] << 16) | (bytes_decodificati[1] << 8) | bytes_decodificati[0] if len(bytes_decodificati) >= 8 else None
-
-    return bytes_decodificati, indice_primo_bit_successivo, country_code_bin, device_code_bin
+    return bytes_decodificati, indice_primo_bit_successivo, None, None, None, None  # Nessun CRC da verificare
 
 
 def calc_crc16_ccitt(data):

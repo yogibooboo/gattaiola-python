@@ -78,8 +78,8 @@ def esegui_analisi():
                 tipi_picchi.append(3)  # bit scartato
         else:
             bits.append(1)
-            tipi_picchi.append(1)  # Inizio bit 1
-            i += 1
+            tipi_picchi.append(1)  #
+            i += 1  # Inizio bit 1
 
     print("Sequenza di bit decodificata:", bits)
 
@@ -102,25 +102,51 @@ def esegui_analisi():
         ax2.text(posizioni_bit[i], 2, str(bit), verticalalignment='center', horizontalalignment='center')
         ax2.text(posizioni_bit[i], -2, str(i), verticalalignment='center', horizontalalignment='center')
 
-    # Decodifica dei bit e dei byte utilizzando utility2.py
-    risultati = utility2.decodifica_bit_e_byte(bits, periodo_bit_campioni)
+    # Trova l'indice di sincronizzazione iniziale
+    indice_partenza = utility2.trova_indice_sincronizzazione(bits)
+    if indice_partenza == -1:
+        print("Nessuna sequenza di sincronizzazione trovata.")
+        return
 
-    if risultati:
-        bytes_decodificati, indice_primo_bit_successivo, country_code_bin, device_code_bin = risultati
+    sequenze_trovate = 0
+    while indice_partenza <= len(bits) - 10:
+        sequenze_trovate += 1
+        print(f"\nCiclo {sequenze_trovate}: Ricerca da indice {indice_partenza}")
+        risultati = utility2.decodifica_bit_e_byte(bits, periodo_bit_campioni, indice_partenza)
 
-        # Stampa dei byte in binario
-        print("Byte decodificati:")
-        for byte in bytes_decodificati:
-            print(f"{byte:08b}")
+        if risultati:
+            bytes_decodificati, indice_primo_bit_successivo, crc_ok, crc_ricevuto, crc_calcolato, errore_sincronizzazione = risultati
 
-        # Visualizzazione dei dati
-        if country_code_bin is not None and device_code_bin is not None:
-            print(f"Country Code: {country_code_bin}")
-            print(f"Device Code: {device_code_bin}")
+            if errore_sincronizzazione is not None:
+                print(f"Errore di sincronizzazione all'indice {errore_sincronizzazione}")
+                indice_partenza = errore_sincronizzazione + 1
+                continue
 
-        # Visualizza l'indice sul grafico
-        if indice_primo_bit_successivo != -1:
-            ax2.axvline(posizioni_bit[indice_primo_bit_successivo], color='blue', linestyle='--', linewidth=2)
+            # Stampa dei byte in binario
+            print("Byte decodificati:")
+            for byte in bytes_decodificati:
+                print(f"{byte:08b}")
+
+            if crc_ok is None: # nessun crc da verificare
+                print("Nessun CRC da verificare.")
+            elif crc_ok:
+                print("Decodifica riuscita!")
+                if crc_calcolato is not None: #aggiunto controllo
+                    print(f"CRC Calcolato: {crc_calcolato:04X}") #aggiunta visualizzazione
+                break
+            else:
+                print("CRC Errato.")
+                print(f"CRC Ricevuto: {crc_ricevuto:04X}")
+                print(f"CRC Calcolato: {crc_calcolato:04X}") #aggiunta visualizzazione
+
+            indice_partenza = indice_primo_bit_successivo + 1
+        else:
+            print("Nessuna sequenza di sincronizzazione trovata.")
+            break
+
+        print(f"Fine ciclo {sequenze_trovate}: Prossima ricerca da indice {indice_partenza}")
+
+    print(f"\nTotale sequenze di sincronizzazione trovate: {sequenze_trovate}")
 
     ax2.set_title('Correlazione, Picchi e Bit Decodificati')
     ax2.legend()
