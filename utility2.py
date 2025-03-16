@@ -41,7 +41,7 @@ def decodifica_bit_e_byte(bits, periodo_bit_campioni, indice_partenza=0):
         crc_ricevuto = (bytes_decodificati[-1] << 8) | bytes_decodificati[-2]
         crc_calcolato = calc_crc16_ccitt(dati)
         if crc_ricevuto == crc_calcolato:
-            return bytes_decodificati, indice_primo_bit_successivo, True, None, None, None  # CRC OK
+            return bytes_decodificati, indice_primo_bit_successivo, True, crc_ricevuto, crc_calcolato, None  # CRC OK
         else:
             return bytes_decodificati, indice_primo_bit_successivo, False, crc_ricevuto, crc_calcolato, None  # CRC Errato
 

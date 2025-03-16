@@ -7,6 +7,7 @@ import utility2
 
 # Flag per scegliere il tipo di filtro: True per media scorrevole, False per filtro mediano
 USA_MEDIA_SCORREVOLE = True  # Imposta a True per usare la media scorrevole, False per il filtro mediano
+DEBUG_CONTINUA_DOPO_SUCCESSO = True #aggiunta qui
 
 def media_scorrevole(segnale, larghezza_finestra):
     """Applica una media scorrevole al segnale."""
@@ -111,11 +112,11 @@ def esegui_analisi():
     sequenze_trovate = 0
     while indice_partenza <= len(bits) - 10:
         sequenze_trovate += 1
-        print(f"\nCiclo {sequenze_trovate}: Ricerca da indice {indice_partenza}")
         risultati = utility2.decodifica_bit_e_byte(bits, periodo_bit_campioni, indice_partenza)
 
         if risultati:
             bytes_decodificati, indice_primo_bit_successivo, crc_ok, crc_ricevuto, crc_calcolato, errore_sincronizzazione = risultati
+            print(f"\nCiclo {sequenze_trovate}: Ricerca da indice {indice_primo_bit_successivo}") #modifica qui
 
             if errore_sincronizzazione is not None:
                 print(f"Errore di sincronizzazione all'indice {errore_sincronizzazione}")
@@ -131,22 +132,26 @@ def esegui_analisi():
                 print("Nessun CRC da verificare.")
             elif crc_ok:
                 print("Decodifica riuscita!")
+                print(f"CRC Ricevuto: {crc_ricevuto:04X}") #aggiunta visualizzazione
                 if crc_calcolato is not None: #aggiunto controllo
                     print(f"CRC Calcolato: {crc_calcolato:04X}") #aggiunta visualizzazione
-                break
+                if not DEBUG_CONTINUA_DOPO_SUCCESSO: #modifica qui
+                    break
             else:
                 print("CRC Errato.")
                 print(f"CRC Ricevuto: {crc_ricevuto:04X}")
-                print(f"CRC Calcolato: {crc_calcolato:04X}") #aggiunta visualizzazione
+                if crc_calcolato is not None: #aggiunto controllo
+                    print(f"CRC Calcolato: {crc_calcolato:04X}") #aggiunta visualizzazione
 
             indice_partenza = indice_primo_bit_successivo + 1
         else:
-            print("Nessuna sequenza di sincronizzazione trovata.")
+            print(f"\nCiclo {sequenze_trovate}: Nessuna sequenza di sincronizzazione trovata da indice {indice_partenza}") #aggiunta qui
             break
 
         print(f"Fine ciclo {sequenze_trovate}: Prossima ricerca da indice {indice_partenza}")
 
-    print(f"\nTotale sequenze di sincronizzazione trovate: {sequenze_trovate}")
+
+
 
     ax2.set_title('Correlazione, Picchi e Bit Decodificati')
     ax2.legend()
