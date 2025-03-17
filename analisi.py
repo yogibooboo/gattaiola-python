@@ -7,7 +7,7 @@ import utility2
 
 # Flag per scegliere il tipo di filtro: True per media scorrevole, False per filtro mediano
 USA_MEDIA_SCORREVOLE = True  # Imposta a True per usare la media scorrevole, False per il filtro mediano
-DEBUG_CONTINUA_DOPO_SUCCESSO = True #aggiunta qui
+DEBUG_CONTINUA_DOPO_SUCCESSO = False #aggiunta qui
 
 def media_scorrevole(segnale, larghezza_finestra):
     """Applica una media scorrevole al segnale."""
@@ -116,7 +116,7 @@ def esegui_analisi():
 
         if risultati:
             bytes_decodificati, indice_primo_bit_successivo, crc_ok, crc_ricevuto, crc_calcolato, errore_sincronizzazione = risultati
-            print(f"\nCiclo {sequenze_trovate}: Ricerca da indice {indice_primo_bit_successivo}") #modifica qui
+            print(f"\nCiclo {sequenze_trovate}: Ricerca da indice {indice_partenza}") 
 
             if errore_sincronizzazione is not None:
                 print(f"Errore di sincronizzazione all'indice {errore_sincronizzazione}")
@@ -125,8 +125,11 @@ def esegui_analisi():
 
             # Stampa dei byte in binario
             print("Byte decodificati:")
-            for byte in bytes_decodificati:
-                print(f"{byte:08b}")
+            if bytes_decodificati is not None: #aggiunta qui
+                for byte in bytes_decodificati:
+                    print(f"{byte:08b}")
+            else:
+                print("Errore nella decodifica dei byte.") #aggiunta qui
 
             if crc_ok is None: # nessun crc da verificare
                 print("Nessun CRC da verificare.")
@@ -143,12 +146,18 @@ def esegui_analisi():
                 if crc_calcolato is not None: #aggiunto controllo
                     print(f"CRC Calcolato: {crc_calcolato:04X}") #aggiunta visualizzazione
 
-            indice_partenza = indice_primo_bit_successivo + 1
+            if indice_primo_bit_successivo is not None: #aggiunta qui
+                indice_partenza = indice_primo_bit_successivo + 1
+            else:
+                indice_partenza = indice_partenza + 10 #aggiunta qui
         else:
-            print(f"\nCiclo {sequenze_trovate}: Nessuna sequenza di sincronizzazione trovata da indice {indice_partenza}") #aggiunta qui
+            print(f"\nCiclo {sequenze_trovate}: Errore di sincronizzazione da indice {indice_partenza}") #modifica qui
             break
 
         print(f"Fine ciclo {sequenze_trovate}: Prossima ricerca da indice {indice_partenza}")
+
+
+
 
 
 
