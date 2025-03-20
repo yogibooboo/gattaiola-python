@@ -4,10 +4,12 @@ import tkinter as tk
 from tkinter import filedialog
 import utility
 import utility2
+import os
+import struct
 
 # Flag per scegliere il tipo di filtro: True per media scorrevole, False per filtro mediano
 USA_MEDIA_SCORREVOLE = True  # Imposta a True per usare la media scorrevole, False per il filtro mediano
-DEBUG_CONTINUA_DOPO_SUCCESSO = False #aggiunta qui
+DEBUG_CONTINUA_DOPO_SUCCESSO = True #aggiunta qui
 
 def media_scorrevole(segnale, larghezza_finestra):
     """Applica una media scorrevole al segnale."""
@@ -20,13 +22,24 @@ def esegui_analisi():
     max_campioni_per_bit = int(max_campioni_per_bit_var.get())
     max_bit_totali = int(max_bit_totali_var.get())
 
-    data, header = utility.leggi_file_binario(percorso_file)
-    periodo_campionamento = header[7] * 1e6
-    durata_bit = 1 / (134.2e3 / 32) * 1e6
+    nome_file = os.path.basename(percorso_file)
 
-    segnale_normalizzato, campioni_per_bit_normalizzato = utility.normalizza_segnale(data, periodo_campionamento, durata_bit, max_campioni_per_bit, max_bit_totali)
-    larghezza_finestra = int((durata_bit / 4) / (periodo_campionamento * (int(durata_bit / (periodo_campionamento * max_campioni_per_bit)))))
+    if nome_file.lower().startswith("adc_"):
+        # Gestione file "adc_"
+        with open(percorso_file, "rb") as f:
+            data = f.read()
+        segnale_normalizzato = np.array(struct.unpack("<" + "h" * (len(data) // 2), data))
+        periodo_campionamento = 1 / 134.2e3 * 1e6 #periodo in microsecondi
+        durata_bit = 1 / (134.2e3 / 32) * 1e6
+        campioni_per_bit_normalizzato = int(durata_bit / periodo_campionamento)
+    else:
+        # Gestione file normali
+        data, header = utility.leggi_file_binario(percorso_file)
+        periodo_campionamento = header[7] * 1e6
+        durata_bit = 1 / (134.2e3 / 32) * 1e6
 
+        segnale_normalizzato, campioni_per_bit_normalizzato = utility.normalizza_segnale(data, periodo_campionamento, durata_bit, max_campioni_per_bit, max_bit_totali)
+    larghezza_finestra = int((durata_bit / 4) / periodo_campionamento)
     if USA_MEDIA_SCORREVOLE:
         segnale_filtrato = media_scorrevole(segnale_normalizzato, larghezza_finestra)
     else:
