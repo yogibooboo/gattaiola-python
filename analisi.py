@@ -6,15 +6,40 @@ import utility
 import utility2
 import os
 import struct
+import asyncio
+import websockets
+from pathlib import Path
 
 # Flag per scegliere il tipo di filtro: True per media scorrevole, False per filtro mediano
 USA_MEDIA_SCORREVOLE = True  # Imposta a True per usare la media scorrevole, False per il filtro mediano
-DEBUG_CONTINUA_DOPO_SUCCESSO = True #aggiunta qui
+DEBUG_CONTINUA_DOPO_SUCCESSO = False #aggiunta qui
 
 def media_scorrevole(segnale, larghezza_finestra):
     """Applica una media scorrevole al segnale."""
     finestra = np.ones(larghezza_finestra) / larghezza_finestra
     return np.convolve(segnale, finestra, mode='same')
+
+async def acquisisci_da_esp32():
+    """Acquisisce i dati dall'ESP32 tramite WebSocket."""
+    uri = "ws://192.168.1.25/ws"  # Sostituisci con l'URI del tuo ESP32
+    try:
+        status_label.config(text="Stato: Connessione in corso...")
+        async with websockets.connect(uri) as websocket:
+            status_label.config(text="Stato: Connesso")
+            await websocket.send("get_buffer")
+            status_label.config(text="Stato: Download in corso...")
+            blob = await websocket.recv()
+            download_path = str(Path.home() / "Downloads" / "adc_buffer.bin")
+            with open(download_path, "wb") as f:
+                f.write(blob)
+            percorso_file_var.set(download_path)  # Aggiorna il percorso del file nella GUI
+            status_label.config(text="Stato: Buffer ricevuto e salvato")
+    except Exception as e:
+        status_label.config(text=f"Errore: {e}")
+
+def avvia_acquisizione():
+    """Avvia l'acquisizione asincrona."""
+    asyncio.run(acquisisci_da_esp32())
 
 
 def esegui_analisi():
@@ -216,6 +241,15 @@ tk.Label(window, text="Max Bit Totali:").grid(row=2, column=0)
 tk.Entry(window, textvariable=max_bit_totali_var).grid(row=2, column=1)
 
 tk.Button(window, text="Esegui", command=esegui_analisi).grid(row=3, column=1)
+
+# Aggiunta del pulsante "Acquisisci da ESP32"
+pulsante_esp32 = tk.Button(window, text="Acquisisci da ESP32", command=avvia_acquisizione)
+pulsante_esp32.grid(row=4, column=1)
+
+# Aggiunta della label per lo stato della connessione
+status_label = tk.Label(window, text="Stato: Inattivo")
+status_label.grid(row=5, column=1)
+
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 9))
 plt.tight_layout()
