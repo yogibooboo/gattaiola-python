@@ -176,6 +176,16 @@ def esegui_analisi():
                 print(f"CRC Ricevuto: {crc_ricevuto:04X}") #aggiunta visualizzazione
                 if crc_calcolato is not None: #aggiunto controllo
                     print(f"CRC Calcolato: {crc_calcolato:04X}") #aggiunta visualizzazione
+                    # Visualizzazione dei dati
+
+                # Country code
+                country_code_bin = (bytes_decodificati[5] << 2) | (bytes_decodificati[4] >> 6)
+                print(f"Country Code: {country_code_bin}")
+
+                # Codice dispositivo
+                device_code_bin = (bytes_decodificati[4] & 0x3F) << 32 | (bytes_decodificati[3] << 24) | (bytes_decodificati[2] << 16) | (bytes_decodificati[1] << 8) | (bytes_decodificati[0])
+                print(f"Device Code: {device_code_bin}")
+            
                 if not DEBUG_CONTINUA_DOPO_SUCCESSO: #modifica qui
                     break
             else:
